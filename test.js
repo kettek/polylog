@@ -1,7 +1,7 @@
-var pLog = require('./index.js').init("file")
-var perr = pLog.new('Error', {logTime: true, logLabel: true});
-var pdbg = pLog.new('Debug', {logLabel: true});
-var plog = pLog.get('');
+var pLog = require('./index.js');
+var perr = pLog.new('Error', {logTime: true, logLabel: true, toTTY: true, toFile: 'error'});
+var pdbg = pLog.new('Debug', {logLabel: true, toTTY: true, toFile: 'debug'});
+var plog = pLog.log; // default TTY-based logger
 
 //perr('test');
 
@@ -13,30 +13,13 @@ var plog = pLog.get('');
 //plog(plog);
 //console.log(plog);
 
+var object = { error: 'oops!' };
+perr('oh no, error: ', object);
+
 //pdbg(a);
 
-function vara() {
-  console.log(arguments);
-  var obj = {};
-  console.log(arguments[0] instanceof Arguments);
-  console.log(typeof arguments);
-}
-
-r_vara = function() {
-  vara(toArguments(arguments));
-}
-
-function Arguments(obj) {};
-function toArguments(obj) {
-  var arg = new Arguments();
-  for (var attr in obj) {
-    arg[attr] = obj[attr];
-  }
-  return arg;
-}
-
 var a = {a: '3'};
-plog('a', a, 'c');
+pdbg('a', a, 'c');
 
-//plog(a);
+plog(a);
 //console.log(a);

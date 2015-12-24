@@ -1,100 +1,99 @@
+/* index.js - polylog
+polylog is an intentionally simple logging system.
+
+Usage:
+  var pLog = require('polylog');
+  // create new Error label with full options
+  var perr = pLog.new('Error', {logTime: true, logLabel: true, toTTY: true, toFile: 'error.log'});
+  var object = { error: 'oops!' };
+  perr('oh no, error: ', object); 
+  // output to stdout and file:
+  // 2015-12-23T23:27:17.274Z Error: oh no, error: { error: 'oops!' }
+  // get default stdout/TTY logger
+  var plog = pLog.log; // or pLog.get('');
+*/
+/* ==== REQUIRES ============================================================ */
 var fs = require('fs');
 var util = require('util');
-
-var streams = [];
-var labels = {};
-var chain;
-
+var stream = require('stream');
+/* ==== GLOBAL OBJECTS ====================================================== */
+var pipers = [];  // label-based associative array to stream.PassThrough objects
+var labels = {};  // label-based associative array of log-building functions
+/* ==== FUNCTIONS =========================================================== */ 
+/* _log(label, arguments)
+Internal function that attempts to log with the given label. Arguments parameter
+may be anything or an instance of Arguments for variadic arguments. All
+arguments are parsed by util.format.
+*/
 function _log(arg1, arg2) {
-  var label = '';
+  // parse arguments
+  var label = arg1;
   var msg = '';
-  if (typeof arg2 === 'undefined') {
-    if (arg1 instanceof Arguments) {
-      for (var arg in arg1) {
-        msg += util.format(arg1[arg]);
-      }
-    } else {
-      msg = util.format(arg1);
+  if (arg2 instanceof Arguments) {
+    for (arg in arg2) {
+      msg += util.format(arg2[arg]);
     }
   } else {
-    label = arg1;
-    if (arg2 instanceof Arguments) {
-      for (var arg in arg2) {
-        msg += util.format(arg2[arg]);
-      }
-    } else {
-      msg = util.format(arg2);
-    }
+    msg = util.format(arg2);
   }
- 
   // build our output customization string
   var str = '';
   if (typeof labels[label] !== 'undefined') {
     for (var j = labels[label].length-1; j >= 0; j--) {
       str = labels[label][j](str);
-      if (j == 0) str += ' ';
+      if (j === 0) str += ' ';
     }
   }
-  // write our string to our streams
-  for (var i = 0; i < streams.length; i++) {
-    streams[i].write(str+msg+'\n');
-  }
-  return module.exports;
+  // write to label's Piper
+  pipers[label].write(str+msg+'\n');
 }
+/* _new(label, options)
+Creates a new label for logging, such as "Error" or similar.
 
-function init(file) {
-  if (typeof file !== 'undefined') {
-    var writable = fs.createWriteStream(file);
-    streams.push(writable);
-  }
-  if (process.stdin.isTTY) {
-    streams.push(process.stdin);
-  }
-  return module.exports;
-}
-module.exports.init = init;
+options object may contain:
+  * bool logLabel
+    * prepends the label to the log
+  * bool logTime
+    * prepends the current timestamp in ISO format
+  * bool toTTY
+    * logs to stdout
+  * string toFile
+    * logs to a given file
 
-function setup() {
-  var cur, last;
-  chain = cur = last = streams[0];
-  for (var i = 0; i < streams.length; i++) {
-    cur = streams[i];
-    if (last != cur) {
-      last.pipe(cur);
-    }
-    last = cur;
-  }
-  return module.exports;
-}
-module.exports.setup = setup;
-
+Returns:
+  a logging function for the given label
+*/
 function _new(label, options) {
   labels[label] = [];
+  pipers[label] = new stream.PassThrough();
   if (typeof options !== 'undefined') {
-    if (options.logLabel == true) {
-      labels[label].push(function(str) { return label+str });
+    if (options.logTime === true) {
+      labels[label].push(function(str) { return new Date().toISOString()+' '+ str; });
     }
-    if (options.logTime == true) {
-      labels[label].push(doTime);
+    if (options.logLabel === true) {
+      labels[label].push(function(str) { return label+':'+str; });
+    }
+    if (options.toTTY === true) {
+      if (process.stdin.isTTY) {
+        pipers[label].pipe(process.stdout);
+      }
+    }
+    if (options.toFile) {
+      var writable = fs.createWriteStream(options.toFile);
+      pipers[label].pipe(writable);
     }
   }
-  streams[label] = [];
   return get(label);
 }
-module.exports.new = _new;
-
+/* get(label)
+returns a function that calls the internal log of the given label
+*/
 function get(label) {
-  return function() { _log(label, toArguments(arguments)) };
-}
-module.exports.get = get;
-module.exports.log = _new('');
-
-function doTime(str) {
-  var new_str = '('+new Date().toISOString() + '):' + str;
-  return new_str;
+  return function() { _log(label, toArguments(arguments)); };
 }
 
-function Arguments() {};
+/* Special internal object format for "variadic" arguments */
+function Arguments() {}
 function toArguments(obj) {
   var args = new Arguments();
   for (var attr in obj) {
@@ -102,3 +101,11 @@ function toArguments(obj) {
   }
   return args;
 }
+/* ==== EXPOSED METHODS ===================================================== */
+module.exports.new = _new;
+module.exports.get = get;
+/* ==== EXPOSED VARIABLES =================================================== */
+module.exports.pipers = pipers;
+module.exports.labels = labels;
+// create default log
+module.exports.log = _new('', {toTTY: true});
