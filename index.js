@@ -19,6 +19,7 @@ var stream = require('stream');
 /* ==== GLOBAL OBJECTS ====================================================== */
 var pipers = [];  // label-based associative array to stream.PassThrough objects
 var labels = {};  // label-based associative array of log-building functions
+var enabled = []; // logging state of a given label
 /* ==== FUNCTIONS =========================================================== */ 
 /* _log(label, arguments)
 Internal function that attempts to log with the given label. Arguments parameter
@@ -26,6 +27,7 @@ may be anything or an instance of Arguments for variadic arguments. All
 arguments are parsed by util.format.
 */
 function _log(arg1, arg2) {
+  if (enabled[arg1] === false) return;
   // parse arguments
   var label = arg1;
   var msg = '';
@@ -79,10 +81,11 @@ function _new(label, options) {
       }
     }
     if (options.toFile) {
-      var writable = fs.createWriteStream(options.toFile);
+      var writable = fs.createWriteStream(options.toFile, { flags: 'a' } );
       pipers[label].pipe(writable);
     }
   }
+  enabled[label] = true;
   return get(label);
 }
 /* get(label)
@@ -91,7 +94,18 @@ returns a function that calls the internal log of the given label
 function get(label) {
   return function() { _log(label, toArguments(arguments)); };
 }
-
+/* disable(label)
+disables the given label for logging
+*/
+function disable(label) {
+  enabled[label] = false;
+}
+/* enable(label)
+enables the given label for logging
+*/
+function enable(label) {
+  enabled[label] = true;
+}
 /* Special internal object format for "variadic" arguments */
 function Arguments() {}
 function toArguments(obj) {
@@ -104,6 +118,8 @@ function toArguments(obj) {
 /* ==== EXPOSED METHODS ===================================================== */
 module.exports.new = _new;
 module.exports.get = get;
+module.exports.enable = enable;
+module.exports.disable = disable;
 /* ==== EXPOSED VARIABLES =================================================== */
 module.exports.pipers = pipers;
 module.exports.labels = labels;
