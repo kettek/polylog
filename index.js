@@ -29,7 +29,6 @@ arguments are parsed by util.format.
 function _log(arg1, arg2) {
   if (enabled[arg1] === false) return;
   // parse arguments
-  var label = arg1;
   var msg = '';
   if (arg2 instanceof Arguments) {
     for (arg in arg2) {
@@ -40,14 +39,14 @@ function _log(arg1, arg2) {
   }
   // build our output customization string
   var str = '';
-  if (typeof labels[label] !== 'undefined') {
-    for (var j = labels[label].length-1; j >= 0; j--) {
-      str = labels[label][j](str);
+  if (typeof labels[arg1] !== 'undefined') {
+    for (var j = labels[arg1].length-1; j >= 0; j--) {
+      str = labels[arg1][j](str);
       if (j === 0) str += ' ';
     }
   }
   // write to label's Piper
-  pipers[label].write(str+msg+'\n');
+  pipers[arg1].write(str+msg+'\n');
 }
 /* _new(label, options)
 Creates a new label for logging, such as "Error" or similar.

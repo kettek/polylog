@@ -1,25 +1,41 @@
 var pLog = require('./index.js');
-var perr = pLog.new('Error', {logTime: true, logLabel: true, toTTY: true, toFile: 'error'});
-var pdbg = pLog.new('Debug', {logLabel: true, toTTY: true, toFile: 'debug'});
-var plog = pLog.log; // default TTY-based logger
 
-//perr('test');
+// use default TTY-only logger
+  var log = pLog.log;
+  log('A test message!');
+// create an Error logger with timestamp, labeling, and output to TTY and 'error' file
+  var error = pLog.new('Error', {logTime: true, logLabel: true, toTTY: true, toFile: 'error'});
+  error('Something erroneous happened!');
+// create a Debug logger with labeling, outputting to TTY and 'debug' file
+  var debug = pLog.new('Debug', {logLabel: true, toTTY: true, toFile: 'debug'});
+  var a = {a: '3'};
+  debug(a);
+// create a file logger, outputting to 'file'
+  var log_to_file = pLog.new('File', {toFile: 'file'});
+  log_to_file('Logged to file');
 
-//plog('yo!');
-//plog('Warning', 'yo!');
-//plog('Warning', 'yo!');
-//plog('yo!');
 
-//plog(plog);
-//console.log(plog);
 
-var object = { error: 'oops!' };
-perr('oh no, error: ', object);
+/*plog('beginning timing test');
 
-//pdbg(a);
+var start = Date.now();
+var tty = pLog.new('tty', {logTime: true, logLabel: true, toTTY: true});
+var file = pLog.new('file', {logTime: true, logLabel: true, toTTY: false, toFile: 'file'});
+var ttyfile = pLog.new('ttyfile', {logTime: true, logLabel: true, toTTY: true, toFile: 'file'});
 
-var a = {a: '3'};
-pdbg('a', a, 'c');
+var data = '...................................................';
+for (var i = 0; i < 22; i++) {
+  data += data;
+}
 
-plog(a);
+var tty_start = Date.now();
+tty(data);
+console.log('tty: %d bytes in %dms', data.length, (Date.now() - tty_start));
+tty_start = Date.now();
+file(data);
+console.log('file: %d bytes in %dms', data.length, (Date.now() - tty_start));
+tty_start = Date.now();
+ttyfile(data);
+console.log('ttyfile: %d bytes in %dms', data.length, (Date.now() - tty_start));
+*/
 //console.log(a);
